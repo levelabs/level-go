@@ -1,22 +1,23 @@
 package main
 
 import (
-	"github.com/levelabs/level-go/cmd"
+	"fmt"
+	s "github.com/levelabs/level-go/scheduler"
+	"log"
+	"net/http"
 )
 
 func main() {
-	cmd.Execute()
-}
+	scheduler := s.NewScheduler()
 
-// func main() {
-// 	app = NewApp()
-//
-// 	http.HandleFunc("/api", apiHandler)
-//
-// 	NewScheduler()
-//
-// 	fmt.Printf("Starting server at port 8080\n")
-// 	if err := http.ListenAndServe(":8080", nil); err != nil {
-// 		log.Fatal(err)
-// 	}
-// }
+	scheduler.Every(5).Seconds().Do(func() {
+		fmt.Println("Scheduler starting...")
+	})
+
+	// Start all the pending jobs
+	s.Start(scheduler)
+
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatal(err)
+	}
+}
