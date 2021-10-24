@@ -1,4 +1,4 @@
-module levelabs/level-go
+module github.com/levelabs/level-go
 
 go 1.17
 

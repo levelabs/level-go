@@ -4,7 +4,9 @@ import (
 	"github.com/levelabs/level-go/cmd"
 )
 
-func main()
+func main() {
+	cmd.Execute()
+}
 
 // func main() {
 // 	app = NewApp()
