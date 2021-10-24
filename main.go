@@ -14,8 +14,9 @@ func main() {
 		fmt.Println("Scheduler starting...")
 	})
 
-	// Start all the pending jobs
 	s.Start(scheduler)
+
+	connect()
 
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatal(err)
