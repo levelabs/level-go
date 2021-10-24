@@ -1,7 +1,7 @@
 package main
 
 import (
-	"level/root"
+	"github.com/levelabs/level-go/cmd"
 )
 
 func main()
