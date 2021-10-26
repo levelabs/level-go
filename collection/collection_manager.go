@@ -110,11 +110,6 @@ func (cm *CollectionManager) QueryTokensForAsset(asset *Asset) error {
 
 	switch u.Scheme {
 	case "ipfs":
-		// a, err := cid.Decode(u.Host)
-		// if err != nil {
-		// 	return err
-		// }
-		// cid := cid.NewCidV1(a.Type(), a.Hash())
 		if tokens, err := cm.ipfs.ObjectGet(u.Host); err == nil {
 			for i := 0; i < len(tokens.Links); i += 1000 {
 				if token, err := cm.ipfs.Cat(tokens.Links[i].Hash); err == nil {
