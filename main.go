@@ -115,7 +115,7 @@ func (app *App) Schedule() {
 
 func main() {
 	assets := map[string]int64{
-		"0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d": time.Now().UnixNano(),
+		collectionBAYC: time.Now().UnixNano(),
 		// "0x4be3223f8708ca6b30d1e8b8926cf281ec83e770": time.Now().UnixNano(),
 		// "0x8a90cab2b38dba80c64b7734e58ee1db38b8992e": time.Now().UnixNano(),
 	}
