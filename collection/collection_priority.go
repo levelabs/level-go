@@ -64,6 +64,12 @@ func NewCollectionQueue(assets map[string]int64) *CollectionQueue {
 	return &cq
 }
 
+func (cq *CollectionQueue) PushAndSetPriorityNow(asset *Asset) {
+	now := time.Now().UnixNano()
+	heap.Push(cq, asset)
+	cq.update(asset, now)
+}
+
 func PopCollectionQueue(cq *CollectionQueue) *Asset {
 	asset := heap.Pop(cq).(*Asset)
 	return asset

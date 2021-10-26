@@ -3,13 +3,14 @@ package collection
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 )
 
 type Asset struct {
 	address string `json:"address"`
 
 	baseURI     *string `json:"baseURI"`
-	tokenSupply int     `json:"tokenSupply"`
+	totalSupply big.Int `json:"tokenSupply"`
 
 	attributes *map[string]string
 
@@ -22,13 +23,21 @@ func NewAsset(address string) *Asset {
 	return &a
 }
 
+func (a *Asset) SetTotalSupply(totalSupply big.Int) {
+	a.totalSupply = totalSupply
+}
+
+func (a *Asset) SetBaseURI(baseURI string) {
+	a.baseURI = &baseURI
+}
+
 func (a *Asset) Address() string {
 	address := a.address
 	return address
 }
 
 func (a *Asset) String() string {
-	return fmt.Sprintf("%s - %s", a.address, *a.baseURI)
+	return fmt.Sprintf("%s - %s - %s", a.address, *a.baseURI, (a.totalSupply).String())
 }
 
 func (a *Asset) MarshalJSON() ([]byte, error) {

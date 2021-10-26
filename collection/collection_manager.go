@@ -38,20 +38,21 @@ func (cm *CollectionManager) RunSequence() (*Asset, error) {
 	asset := PopCollectionQueue(cq)
 	fmt.Printf("Sequencing: %.2d:%s\n", asset.priority, asset.address)
 
-	err := cm.SetBaseURI(asset)
+	err := cm.SetTotalSupplyForAsset(asset)
 	if err != nil {
-		// now := time.Now().UnixNano()
-		// heap.Push(cq, asset)
-		// cq.update(asset, now)
+		cq.PushAndSetPriorityNow(asset)
+		return nil, err
+	}
+
+	err = cm.SetBaseURIForAsset(asset)
+	if err != nil {
+		cq.PushAndSetPriorityNow(asset)
 		return nil, err
 	}
 
 	err = cm.QueryAttributes(asset)
 	if err != nil {
-		// now := time.Now().UnixNano()
-		// heap.Push(cq, asset)
-		// cq.update(asset, now)
-		fmt.Println("query attributes failed", err)
+		cq.PushAndSetPriorityNow(asset)
 		return nil, err
 	}
 
@@ -74,7 +75,7 @@ func NewCollectionManager(assets map[string]int64) (*CollectionManager, error) {
 	return &cm, nil
 }
 
-func (cm *CollectionManager) SetBaseURI(asset *Asset) error {
+func (cm *CollectionManager) SetBaseURIForAsset(asset *Asset) error {
 	collection, err := NewCollection(common.HexToAddress(asset.address), cm.eth)
 	if err != nil {
 		return err
@@ -85,7 +86,23 @@ func (cm *CollectionManager) SetBaseURI(asset *Asset) error {
 		return err
 	}
 
-	asset.baseURI = &baseURI
+	asset.SetBaseURI(baseURI)
+
+	return nil
+}
+
+func (cm *CollectionManager) SetTotalSupplyForAsset(asset *Asset) error {
+	collection, err := NewCollection(common.HexToAddress(asset.address), cm.eth)
+	if err != nil {
+		return err
+	}
+
+	totalSupply, err := collection.TotalSupply(&bind.CallOpts{})
+	if err != nil {
+		return err
+	}
+
+	asset.SetTotalSupply(*totalSupply)
 
 	return nil
 }
