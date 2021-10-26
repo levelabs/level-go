@@ -1,24 +1,40 @@
 package main
 
 import (
-	"fmt"
-	s "github.com/levelabs/level-go/scheduler"
-	"log"
-	"net/http"
+	// "fmt"
+	// "github.com/go-co-op/gocron"
+	"github.com/levelabs/level-go/collection"
+	// s "github.com/levelabs/level-go/scheduler"
+	// "log"
+	// "net/http"
 )
 
+// const (
+// 	collectionBAYC      = "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d"
+// 	colectionPartyDegen = "0x4be3223f8708ca6b30d1e8b8926cf281ec83e770"
+// )
+//
+// type App struct {
+// 	scheduler  *gocron.Scheduler
+// 	collection *Collections
+// }
+//
+// func NewApp() *App {
+// 	scheduler := s.NewScheduler()
+// 	app := App{scheduler: scheduler}
+// 	return &app
+// }
+
 func main() {
-	scheduler := s.NewScheduler()
+	collection.CollectionPriorityTest()
 
-	scheduler.Every(5).Seconds().Do(func() {
-		fmt.Println("Scheduler starting...")
-	})
-
-	s.Start(scheduler)
-
-	connect()
-
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatal(err)
-	}
+	// NewApp()
+	//
+	// c := collection.NewAsset(colectionPartyDegen)
+	// c.SetBaseURI()
+	// c.QueryAttributes()
+	//
+	// if err := http.ListenAndServe(":8080", nil); err != nil {
+	// 	log.Fatal(err)
+	// }
 }
