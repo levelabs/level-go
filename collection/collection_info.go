@@ -2,16 +2,15 @@ package collection
 
 import (
 	"errors"
-	"fmt"
-	"log"
-	"strings"
+	// "fmt"
+	// "log"
+	// "strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-
-	cid "github.com/ipfs/go-cid"
-	mbase "github.com/multiformats/go-multibase"
+	// cid "github.com/ipfs/go-cid"
+	// mbase "github.com/multiformats/go-multibase"
 	// mh "github.com/multiformats/go-multihash"
 	// shell "github.com/ipfs/go-ipfs-api"
 )
@@ -63,16 +62,17 @@ func (asset *Asset) QueryAttributes() error {
 		return errBaseURINotFound
 	}
 
-	fmt.Println("uri", *asset.baseURI)
+	// fmt.Println("uri", *asset.baseURI)
 
 	// sh := shell.NewShell(ipfsURI)
-	c, err := cid.Decode(strings.Trim(*asset.baseURI, "ipfs://"))
-	if err != nil {
-		log.Fatal(err)
-		return err
-	}
+	// c, err := cid.Decode(strings.Trim(*asset.baseURI, "ipfs://"))
+	// if err != nil {
+	// 	log.Fatal(err)
+	// 	return err
+	// }
+	//
 
-	fmt.Println(c.StringOfBase(mbase.Base58BTC))
+	// fmt.Println(c.StringOfBase(mbase.Base58BTC))
 
 	// fmt.Println(cid.Decode(strings.Trim(*asset.baseURI, "ipfs://")))
 	// fmt.Println(mh.FromB58String(strings.Trim(*asset.baseURI, "ipfs://")))

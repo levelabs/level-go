@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	badger "github.com/dgraph-io/badger/v3"
 	"github.com/dgraph-io/ristretto"
@@ -43,7 +42,7 @@ func NewApp(assets map[string]int64) *App {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
+	// defer db.Close()
 
 	app := App{
 		scheduler:       scheduler,
@@ -60,29 +59,49 @@ func (app *App) Schedule() {
 		err, asset := app.collectionQueue.RunSequence()
 		if err != nil {
 			// do something
-			fmt.Println("can't run")
+			fmt.Println(err)
 			return
 		}
 
-		fmt.Println("asset sequenced", asset.Address())
-
-		serialized, err := json.Marshal(asset)
+		serialized, err := asset.MarshalJSON()
 		if err != nil {
 			// do something
 		}
 
 		address := asset.Address()
-		key := []byte(address)
-		txn := app.db.NewTransaction(true)
+		err = app.db.Update(func(txn *badger.Txn) error {
+			err := txn.Set([]byte(address), serialized)
+			return err
+		})
 
-		if err := txn.Set(key, []byte(serialized)); err == badger.ErrTxnTooBig {
-			if err := txn.Commit(); err != nil {
+		if err != nil {
+			fmt.Println("Db error", err)
+		}
+	})
+
+	app.scheduler.Every(5).Seconds().Do(func() {
+		fmt.Println("checker")
+		err := app.db.View(func(txn *badger.Txn) error {
+			item, err := txn.Get([]byte("0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d"))
+			if err != nil {
 				// do something
 			}
-			txn = app.db.NewTransaction(true)
-			if err := txn.Set(key, []byte(serialized)); err != nil {
-				// do something
-			}
+
+			fmt.Println("found item", item)
+
+			var asset []byte
+			err = item.Value(func(val []byte) error {
+				asset = append([]byte{}, val...)
+				return nil
+			})
+
+			fmt.Println("Asset in byte", string(asset))
+
+			return nil
+		})
+
+		if err != nil {
+			// do something
 		}
 	})
 
