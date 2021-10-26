@@ -5,13 +5,11 @@ import (
 	"fmt"
 )
 
-type Collections struct {
-	assets []Asset
-}
-
 type Asset struct {
-	address string  `json:"address"`
-	baseURI *string `json:"baseURI"`
+	address string `json:"address"`
+
+	baseURI     *string `json:"baseURI"`
+	tokenSupply int     `json:"tokenSupply"`
 
 	attributes *map[string]string
 
@@ -30,7 +28,7 @@ func (a *Asset) Address() string {
 }
 
 func (a *Asset) String() string {
-	return fmt.Sprintf("%s - %s", a.address, a.baseURI)
+	return fmt.Sprintf("%s - %s", a.address, *a.baseURI)
 }
 
 func (a *Asset) MarshalJSON() ([]byte, error) {

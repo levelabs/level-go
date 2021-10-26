@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	badger "github.com/dgraph-io/badger/v3"
 	"github.com/dgraph-io/ristretto"
@@ -17,9 +18,13 @@ const (
 	colectionPartyDegen = "0x4be3223f8708ca6b30d1e8b8926cf281ec83e770"
 )
 
+var (
+	errCollectionManagerFailed = errors.New("collection manager failed to start")
+)
+
 type App struct {
-	scheduler       *gocron.Scheduler
-	collectionQueue *c.CollectionQueue
+	scheduler         *gocron.Scheduler
+	collectionManager *c.CollectionManager
 
 	cache *ristretto.Cache
 	db    *badger.DB
@@ -27,7 +32,11 @@ type App struct {
 
 func NewApp(assets map[string]int64) *App {
 	scheduler := s.NewScheduler()
-	collectionQueue := c.NewCollectionQueue(assets)
+
+	cm, err := c.NewCollectionManager(assets)
+	if err != nil {
+		log.Fatal(errCollectionManagerFailed)
+	}
 
 	cache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1e7,     // number of keys to track frequency of (10M).
@@ -42,13 +51,12 @@ func NewApp(assets map[string]int64) *App {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// defer db.Close()
 
 	app := App{
-		scheduler:       scheduler,
-		collectionQueue: collectionQueue,
-		cache:           cache,
-		db:              db,
+		scheduler:         scheduler,
+		collectionManager: cm,
+		cache:             cache,
+		db:                db,
 	}
 
 	return &app
@@ -56,7 +64,7 @@ func NewApp(assets map[string]int64) *App {
 
 func (app *App) Schedule() {
 	app.scheduler.Every(5).Seconds().Do(func() {
-		err, asset := app.collectionQueue.RunSequence()
+		asset, err := app.collectionManager.RunSequence()
 		if err != nil {
 			// do something
 			fmt.Println(err)
@@ -80,14 +88,11 @@ func (app *App) Schedule() {
 	})
 
 	app.scheduler.Every(5).Seconds().Do(func() {
-		fmt.Println("checker")
 		err := app.db.View(func(txn *badger.Txn) error {
 			item, err := txn.Get([]byte("0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d"))
 			if err != nil {
 				// do something
 			}
-
-			fmt.Println("found item", item)
 
 			var asset []byte
 			err = item.Value(func(val []byte) error {

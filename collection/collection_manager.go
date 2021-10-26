@@ -2,7 +2,7 @@ package collection
 
 import (
 	"errors"
-	// "fmt"
+	"fmt"
 	// "log"
 	// "strings"
 
@@ -19,17 +19,63 @@ var (
 	ethURI  = "https://mainnet.infura.io/v3/79808cbe443249a8bc8bf46dea32b6f5"
 	ipfsURI = "localhost:5001"
 
+	errEthClientFailed = errors.New("failed to start eth client")
 	errBaseURINotFound = errors.New("baseURI not found")
 )
 
-func (asset *Asset) SetBaseURI() error {
-	client, err := ethclient.Dial(ethURI)
-	if err != nil {
-		return err
+type CollectionManager struct {
+	eth *ethclient.Client
+
+	queue *CollectionQueue
+}
+
+func (cm *CollectionManager) RunSequence() (*Asset, error) {
+	cq := cm.queue
+	if cq.Len() <= 0 {
+		return nil, errEmptyQueue
 	}
 
-	address := common.HexToAddress(asset.address)
-	collection, err := NewCollection(address, client)
+	asset := PopCollectionQueue(cq)
+	fmt.Printf("Sequencing: %.2d:%s\n", asset.priority, asset.address)
+
+	err := cm.SetBaseURI(asset)
+	if err != nil {
+		// now := time.Now().UnixNano()
+		// heap.Push(cq, asset)
+		// cq.update(asset, now)
+		return nil, err
+	}
+
+	err = cm.QueryAttributes(asset)
+	if err != nil {
+		// now := time.Now().UnixNano()
+		// heap.Push(cq, asset)
+		// cq.update(asset, now)
+		fmt.Println("query attributes failed", err)
+		return nil, err
+	}
+
+	return asset, nil
+}
+
+func NewCollectionManager(assets map[string]int64) (*CollectionManager, error) {
+	client, err := ethclient.Dial(ethURI)
+	if err != nil {
+		return nil, errEthClientFailed
+	}
+
+	queue := NewCollectionQueue(assets)
+
+	cm := CollectionManager{
+		eth:   client,
+		queue: queue,
+	}
+
+	return &cm, nil
+}
+
+func (cm *CollectionManager) SetBaseURI(asset *Asset) error {
+	collection, err := NewCollection(common.HexToAddress(asset.address), cm.eth)
 	if err != nil {
 		return err
 	}
@@ -44,20 +90,7 @@ func (asset *Asset) SetBaseURI() error {
 	return nil
 }
 
-// {"image":"ipfs://QmPbxeGcXhYQQNgsC6a36dDyYUcHgMLnGKnF8pVFmGsvqi","attributes":[{"trait_type":"Mouth","value":"Grin"},{"trait_type":"Clothes","value":"Vietnam Jacket"},{"trait_type":"Background","value":"Orange"},{"trait_type":"Eyes","value":"Blue Beams"},{"trait_type":"Fur","value":"Robot"}]}
-// type Folder struct {
-// }
-//
-// type Item struct {
-// 	Hash  ItemData
-// 	Name  string
-// 	Tsize number
-// }
-//
-// type ItemData struct {
-// }
-
-func (asset *Asset) QueryAttributes() error {
+func (cm *CollectionManager) QueryAttributes(asset *Asset) error {
 	if asset.baseURI == nil {
 		return errBaseURINotFound
 	}

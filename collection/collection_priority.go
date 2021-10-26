@@ -64,32 +64,9 @@ func NewCollectionQueue(assets map[string]int64) *CollectionQueue {
 	return &cq
 }
 
-func (cq *CollectionQueue) RunSequence() (error, *Asset) {
-	if cq.Len() <= 0 {
-		return errEmptyQueue, nil
-	}
-
+func PopCollectionQueue(cq *CollectionQueue) *Asset {
 	asset := heap.Pop(cq).(*Asset)
-	fmt.Printf("Sequencing: %.2d:%s\n", asset.priority, asset.address)
-
-	err := asset.SetBaseURI()
-	if err != nil {
-		now := time.Now().UnixNano()
-		heap.Push(cq, asset)
-		cq.update(asset, now)
-		return err, nil
-	}
-
-	err = asset.QueryAttributes()
-	if err != nil {
-		now := time.Now().UnixNano()
-		heap.Push(cq, asset)
-		cq.update(asset, now)
-		fmt.Println("query attributes failed", err)
-		return err, nil
-	}
-
-	return nil, asset
+	return asset
 }
 
 func CollectionQueueTest() {
