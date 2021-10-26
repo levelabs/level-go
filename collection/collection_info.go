@@ -26,20 +26,17 @@ var (
 func (asset *Asset) SetBaseURI() error {
 	client, err := ethclient.Dial(ethURI)
 	if err != nil {
-		log.Fatal(err)
 		return err
 	}
 
 	address := common.HexToAddress(asset.address)
 	collection, err := NewCollection(address, client)
 	if err != nil {
-		log.Fatal(err)
 		return err
 	}
 
 	baseURI, err := collection.BaseURI(&bind.CallOpts{})
 	if err != nil {
-		log.Fatal(err)
 		return err
 	}
 

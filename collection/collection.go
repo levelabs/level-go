@@ -5,7 +5,8 @@ type Collections struct {
 }
 
 type Asset struct {
-	address    string
+	address string
+
 	baseURI    *string
 	attributes *map[string]string
 
@@ -16,4 +17,9 @@ type Asset struct {
 func NewAsset(address string) *Asset {
 	a := Asset{address: address}
 	return &a
+}
+
+func (a *Asset) Address() string {
+	address := a.address
+	return address
 }

@@ -2,8 +2,13 @@ package collection
 
 import (
 	"container/heap"
+	"errors"
 	"fmt"
 	"time"
+)
+
+var (
+	errEmptyQueue = errors.New("collection queue is empty")
 )
 
 type CollectionQueue []*Asset
@@ -39,8 +44,7 @@ func (cq CollectionQueue) Swap(i, j int) {
 }
 
 // update modifies the priority and value of an Asset in the queue.
-func (cq *CollectionQueue) update(asset *Asset, address string, priority int64) {
-	asset.address = address
+func (cq *CollectionQueue) update(asset *Asset, priority int64) {
 	asset.priority = priority
 	heap.Fix(cq, asset.index)
 }
@@ -58,6 +62,34 @@ func NewCollectionQueue(assets map[string]int64) *CollectionQueue {
 	}
 	heap.Init(&cq)
 	return &cq
+}
+
+func (cq *CollectionQueue) RunSequence() (error, *Asset) {
+	if cq.Len() <= 0 {
+		return errEmptyQueue, nil
+	}
+
+	asset := heap.Pop(cq).(*Asset)
+	fmt.Printf("Sequencing: %.2d:%s\n", asset.priority, asset.address)
+
+	err := asset.SetBaseURI()
+	if err != nil {
+		now := time.Now().UnixNano()
+		heap.Push(cq, asset)
+		cq.update(asset, now)
+		return err, nil
+	}
+
+	err = asset.QueryAttributes()
+	if err != nil {
+		now := time.Now().UnixNano()
+		heap.Push(cq, asset)
+		cq.update(asset, now)
+		fmt.Println("query attributes failed", err)
+		return err, nil
+	}
+
+	return nil, asset
 }
 
 func CollectionQueueTest() {
@@ -78,7 +110,7 @@ func CollectionQueueTest() {
 	}
 	heap.Push(cq, asset)
 
-	cq.update(asset, asset.address, time.Now().UnixNano())
+	cq.update(asset, time.Now().UnixNano())
 
 	// Take the items out; they arrive in decreasing priority order.
 	for cq.Len() > 0 {
