@@ -37,7 +37,7 @@ func (a *Asset) Address() string {
 }
 
 func (a *Asset) String() string {
-	return fmt.Sprintf("%s - %s - %s", a.address, *a.baseURI, (a.totalSupply).String())
+	return fmt.Sprintf("%s - %s", a.address, (a.totalSupply).String())
 }
 
 func (a *Asset) MarshalJSON() ([]byte, error) {
