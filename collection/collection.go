@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/levelabs/level-go/common"
 )
 
 type Asset struct {
-	address     common.Address `json:"address"`
-	baseURI     *string        `json:"baseURI"`
-	totalSupply big.Int        `json:"tokenSupply"`
+	address     ethcommon.Address `json:"address"`
+	baseURI     *string           `json:"baseURI"`
+	totalSupply big.Int           `json:"tokenSupply"`
 
 	attributes *map[string]string
 
@@ -33,9 +34,11 @@ type Trait struct {
 	items map[string]int
 }
 
+type TraitMap = map[string]*Trait
+
 func NewAsset(address string, priority int64, index int) *Asset {
 	a := Asset{
-		address:  common.HexToAddress(address),
+		address:  ethcommon.HexToAddress(address),
 		priority: priority,
 		index:    index,
 	}
@@ -61,4 +64,32 @@ func (a *Asset) String() string {
 
 func (a *Asset) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a.String())
+}
+
+func FetchAndBuildAttributes(client ClientInterface, tokenUrl string, mapping map[string]*Trait) error {
+	res, err := client.Get(tokenUrl)
+	if err != nil {
+		return err
+	}
+	var t Token
+	common.UnmarshalJSON(res, &t)
+
+	attributes := t.Attributes
+
+	for j := 0; j < len(attributes); j++ {
+		attribute := attributes[j]
+		trait := attribute.Trait
+		value := attribute.Value
+
+		if mapping[trait] == nil {
+			var t *Trait
+			t = new(Trait)
+			t.items = make(map[string]int)
+			mapping[trait] = t
+		}
+
+		mapping[trait].items[value]++
+	}
+
+	return nil
 }
