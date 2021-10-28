@@ -6,7 +6,7 @@ import (
 	badger "github.com/dgraph-io/badger/v3"
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-co-op/gocron"
-	c "github.com/levelabs/level-go/collection"
+	"github.com/levelabs/level-go/collection"
 	s "github.com/levelabs/level-go/scheduler"
 	"log"
 	"net/http"
@@ -19,12 +19,12 @@ const (
 )
 
 var (
-	errCollectionManagerFailed = errors.New("collection manager failed to start")
+	errManagerFailed = errors.New("Manager failed to start")
 )
 
 type App struct {
-	scheduler         *gocron.Scheduler
-	collectionManager *c.CollectionManager
+	scheduler *gocron.Scheduler
+	manager   *collection.Manager
 
 	cache *ristretto.Cache
 	db    *badger.DB
@@ -33,9 +33,9 @@ type App struct {
 func NewApp(assets map[string]int64) *App {
 	scheduler := s.NewScheduler()
 
-	cm, err := c.NewCollectionManager(assets)
+	manager, err := collection.NewManager(assets)
 	if err != nil {
-		log.Fatal(errCollectionManagerFailed)
+		log.Fatal(errManagerFailed)
 	}
 
 	cache, err := ristretto.NewCache(&ristretto.Config{
@@ -53,10 +53,10 @@ func NewApp(assets map[string]int64) *App {
 	}
 
 	app := App{
-		scheduler:         scheduler,
-		collectionManager: cm,
-		cache:             cache,
-		db:                db,
+		scheduler: scheduler,
+		manager:   manager,
+		cache:     cache,
+		db:        db,
 	}
 
 	return &app
@@ -64,7 +64,7 @@ func NewApp(assets map[string]int64) *App {
 
 func (app *App) Schedule() {
 	app.scheduler.Every(5).Seconds().Do(func() {
-		asset, err := app.collectionManager.RunSequence()
+		asset, err := app.manager.RunSequence()
 		if err != nil {
 			// do something
 			fmt.Println(err)
@@ -115,7 +115,7 @@ func (app *App) Schedule() {
 
 func main() {
 	assets := map[string]int64{
-		colectionPartyDegen: time.Now().UnixNano(),
+		collectionBAYC: time.Now().UnixNano(),
 		// "0x4be3223f8708ca6b30d1e8b8926cf281ec83e770": time.Now().UnixNano(),
 		// "0x8a90cab2b38dba80c64b7734e58ee1db38b8992e": time.Now().UnixNano(),
 	}

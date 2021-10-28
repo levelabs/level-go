@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type Asset struct {
-	address string `json:"address"`
-
-	baseURI     *string `json:"baseURI"`
-	totalSupply big.Int `json:"tokenSupply"`
+	address     common.Address `json:"address"`
+	baseURI     *string        `json:"baseURI"`
+	totalSupply big.Int        `json:"tokenSupply"`
 
 	attributes *map[string]string
 
@@ -18,8 +19,26 @@ type Asset struct {
 	index    int
 }
 
-func NewAsset(address string) *Asset {
-	a := Asset{address: address}
+type Attribute struct {
+	Trait string `json:"trait_type"`
+	Value string `json:"value"`
+}
+
+type Token struct {
+	Image      string      `json:"image"`
+	Attributes []Attribute `json:"attributes"`
+}
+
+type Trait struct {
+	items map[string]int
+}
+
+func NewAsset(address string, priority int64, index int) *Asset {
+	a := Asset{
+		address:  common.HexToAddress(address),
+		priority: priority,
+		index:    index,
+	}
 	return &a
 }
 
@@ -33,7 +52,7 @@ func (a *Asset) SetBaseURI(baseURI string) {
 
 func (a *Asset) Address() string {
 	address := a.address
-	return address
+	return address.String()
 }
 
 func (a *Asset) String() string {
