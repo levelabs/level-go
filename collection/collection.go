@@ -19,20 +19,6 @@ type Asset struct {
 	index    int
 }
 
-type Item struct {
-	name map[string]int
-}
-
-type Trait struct {
-	Counter map[string]*Item
-}
-
-func NewTrait() *Trait {
-	var trait Trait
-	trait.Counter = make(map[string]*Item)
-	return &trait
-}
-
 func NewAsset(address string, priority int64, index int) *Asset {
 	a := Asset{
 		address:  ethcommon.HexToAddress(address),
@@ -61,21 +47,4 @@ func (a *Asset) String() string {
 
 func (a *Asset) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a.String())
-}
-
-func BuildTrait(attributes *[]Attribute, trait *Trait) {
-	counter := (*trait).Counter
-
-	for j := 0; j < len(*attributes); j++ {
-		trait := (*attributes)[j].Trait
-		value := (*attributes)[j].Value
-
-		if counter[trait] == nil {
-			t := new(Item)
-			t.name = make(map[string]int)
-			counter[trait] = t
-		}
-
-		counter[trait].name[value]++
-	}
 }
