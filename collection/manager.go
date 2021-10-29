@@ -90,7 +90,7 @@ func (manager *Manager) SetTotalSupplyForAsset(asset *Asset) error {
 	return nil
 }
 
-func (manager *Manager) UpdateAttributes(asset *Asset) (*AttributeMap, error) {
+func (manager *Manager) UpdateAttributes(asset *Asset) (*Trait, error) {
 	collection, err := NewCollection(asset.address, manager.Connection.Ethereum.Client)
 	if err != nil {
 		return nil, err
@@ -116,7 +116,7 @@ func (manager *Manager) UpdateAttributes(asset *Asset) (*AttributeMap, error) {
 		return nil, err
 	}
 
-	attributeMap := make(AttributeMap)
+	trait := NewTrait()
 
 	switch baseUrl.Scheme {
 	case "ipfs":
@@ -125,23 +125,27 @@ func (manager *Manager) UpdateAttributes(asset *Asset) (*AttributeMap, error) {
 			return nil, err
 		}
 
-		for i := 0; i < len(ipfsUris.Links); i += 1000 {
-			if err := FetchAndBuildAttributes(manager.Connection.IPFS, ipfsUris.Links[i].Hash, attributeMap); err != nil {
-				return nil, err
+		for i := 0; i < len(ipfsUris.Links); i += 5000 {
+			var token Token
+			if err := GetTokenData(manager.Connection.IPFS, ipfsUris.Links[i].Hash, &token); err == nil {
+				BuildTrait(&token.Attributes, trait)
 			}
 		}
 	case "https":
 		for i := 0; i < int((asset.totalSupply).Int64()); i += 1000 {
-			if err := FetchAndBuildAttributes(manager.Connection.Http, common.BuildUrl(uriZero, i), attributeMap); err != nil {
-				return nil, err
+			var token Token
+			if err := GetTokenData(manager.Connection.Http, common.BuildUrl(uriZero, i), &token); err == nil {
+				BuildTrait(&token.Attributes, trait)
 			}
 		}
 	default:
 		return nil, errURIFormatNotFound
 	}
 
+	fmt.Println(trait)
+
 	// ret
-	return &attributeMap, nil
+	return trait, nil
 }
 
 func (manager *Manager) RunSequence() (*Asset, error) {
@@ -161,6 +165,17 @@ func (manager *Manager) RunSequence() (*Asset, error) {
 	}
 
 	return asset, nil
+}
+
+func GetTokenData(fetcher ClientFetcher, tokenUrl string, token *Token) error {
+	res, err := fetcher.Get(tokenUrl)
+	if err != nil {
+		return err
+	}
+	if err := common.UnmarshalJSON(res, &token); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (manager *Manager) WaitlistAppend(asset *Asset) {

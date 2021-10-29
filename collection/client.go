@@ -16,7 +16,7 @@ var (
 	errClientIPFSGet = errors.New("There was an issue when querying the IPFS client")
 )
 
-type Fetcher interface {
+type ClientFetcher interface {
 	Get(uri string) (io.ReadCloser, error)
 }
 
