@@ -6,12 +6,20 @@ type Item struct {
 
 type Trait struct {
 	Counter map[string]*Item
+
+	index int
 }
 
 func NewTrait() *Trait {
 	var trait Trait
 	trait.Counter = make(map[string]*Item)
 	return &trait
+}
+
+func NewItem() *Item {
+	t := new(Item)
+	t.name = make(map[string]int)
+	return t
 }
 
 func BuildTrait(attributes *[]Attribute, trait *Trait) {
@@ -22,11 +30,12 @@ func BuildTrait(attributes *[]Attribute, trait *Trait) {
 		value := (*attributes)[j].Value
 
 		if counter[trait] == nil {
-			t := new(Item)
-			t.name = make(map[string]int)
-			counter[trait] = t
+			item := NewItem()
+			counter[trait] = item
 		}
 
 		counter[trait].name[value]++
 	}
+
+	(*trait).index++
 }

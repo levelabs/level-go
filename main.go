@@ -66,8 +66,8 @@ func (app *App) Schedule() {
 	app.scheduler.Every(5).Seconds().Do(func() {
 		asset, err := app.manager.RunSequence()
 		if err != nil {
-			// do something
-			fmt.Println(err)
+			// Handle Each Error Here!
+			fmt.Println("[WARN]: Sequencing", err)
 			return
 		}
 

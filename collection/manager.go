@@ -120,32 +120,50 @@ func (manager *Manager) UpdateAttributes(asset *Asset) (*Trait, error) {
 
 	switch baseUrl.Scheme {
 	case "ipfs":
-		ipfsUris, err := manager.Connection.IPFS.Client.ObjectGet(baseUrl.Host)
-		if err != nil {
+		fmt.Println("IPFS")
+		if err := manager.RunIPFSTraitGetter(trait, baseUrl.Host, asset); err != nil {
 			return nil, err
 		}
-
-		for i := 0; i < len(ipfsUris.Links); i += 5000 {
-			var token Token
-			if err := GetTokenData(manager.Connection.IPFS, ipfsUris.Links[i].Hash, &token); err == nil {
-				BuildTrait(&token.Attributes, trait)
-			}
-		}
 	case "https":
-		for i := 0; i < int((asset.totalSupply).Int64()); i += 1000 {
-			var token Token
-			if err := GetTokenData(manager.Connection.Http, common.BuildUrl(uriZero, i), &token); err == nil {
-				BuildTrait(&token.Attributes, trait)
-			}
+		if err := manager.RunHttpTraitGetter(trait, uriZero, asset); err != nil {
+			return nil, err
 		}
 	default:
 		return nil, errURIFormatNotFound
 	}
 
-	fmt.Println(trait)
-
 	// ret
 	return trait, nil
+}
+
+func (manager *Manager) RunIPFSTraitGetter(trait *Trait, baseUrl string, _ *Asset) error {
+	ipfsUris, err := manager.Connection.IPFS.Client.ObjectGet(baseUrl)
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < len(ipfsUris.Links); i += 5000 {
+		var token Token
+		err := GetTokenData(manager.Connection.IPFS, ipfsUris.Links[i].Hash, &token)
+		if err != nil {
+			return err
+		}
+		BuildTrait(&token.Attributes, trait)
+	}
+
+	return nil
+}
+
+func (manager *Manager) RunHttpTraitGetter(trait *Trait, baseUrl string, asset *Asset) error {
+	for i := 0; i < int((asset.totalSupply).Int64()); i += 1000 {
+		var token Token
+		err := GetTokenData(manager.Connection.Http, common.BuildUrl(baseUrl, i), &token)
+		if err != nil {
+			return err
+		}
+		BuildTrait(&token.Attributes, trait)
+	}
+	return nil
 }
 
 func (manager *Manager) RunSequence() (*Asset, error) {
