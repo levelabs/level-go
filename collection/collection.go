@@ -15,26 +15,19 @@ type Asset struct {
 	totalSupply big.Int           `json:"tokenSupply"`
 
 	attributes *map[string]string
+	traitMap   *TraitMap
 
 	priority int64
 	index    int
 }
 
-type Attribute struct {
-	Trait string `json:"trait_type"`
-	Value string `json:"value"`
-}
+type Trait = map[string]int
 
-type Token struct {
-	Image      string      `json:"image"`
-	Attributes []Attribute `json:"attributes"`
-}
-
-type Trait struct {
+type TraitMap struct {
 	items map[string]int
 }
 
-type TraitMap = map[string]*Trait
+type AttributeMap = map[string]*TraitMap
 
 func NewAsset(address string, priority int64, index int) *Asset {
 	a := Asset{
@@ -66,11 +59,12 @@ func (a *Asset) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a.String())
 }
 
-func FetchAndBuildAttributes(client ClientInterface, tokenUrl string, mapping map[string]*Trait) error {
+func FetchAndBuildAttributes(client Fetcher, tokenUrl string, mapping map[string]*TraitMap) error {
 	res, err := client.Get(tokenUrl)
 	if err != nil {
 		return err
 	}
+
 	var t Token
 	common.UnmarshalJSON(res, &t)
 
@@ -82,8 +76,7 @@ func FetchAndBuildAttributes(client ClientInterface, tokenUrl string, mapping ma
 		value := attribute.Value
 
 		if mapping[trait] == nil {
-			var t *Trait
-			t = new(Trait)
+			t := new(TraitMap)
 			t.items = make(map[string]int)
 			mapping[trait] = t
 		}

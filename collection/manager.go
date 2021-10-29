@@ -26,6 +26,16 @@ type Manager struct {
 	Waitlist   *PriorityQueue
 }
 
+type Attribute struct {
+	Trait string `json:"trait_type"`
+	Value string `json:"value"`
+}
+
+type Token struct {
+	Image      string      `json:"image"`
+	Attributes []Attribute `json:"attributes"`
+}
+
 func NewManager(assets map[string]int64) (*Manager, error) {
 	clientConfig := ClientConfig{
 		EthUri:  ethUri,
@@ -80,56 +90,58 @@ func (manager *Manager) SetTotalSupplyForAsset(asset *Asset) error {
 	return nil
 }
 
-func (manager *Manager) UpdateAttributes(asset *Asset) error {
+func (manager *Manager) UpdateAttributes(asset *Asset) (*AttributeMap, error) {
 	collection, err := NewCollection(asset.address, manager.Connection.Ethereum.Client)
 	if err != nil {
-		return err
+		return nil, err
+	}
+
+	if err := manager.SetTotalSupplyForAsset(asset); err != nil {
+		return nil, err
 	}
 
 	// todo: what if there isn't a token zero
 	tokenZero, err := collection.TokenByIndex(&bind.CallOpts{}, big.NewInt(0))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	uriZero, err := collection.TokenURI(&bind.CallOpts{}, tokenZero)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	baseUrl, err := url.Parse(uriZero)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	attributes := make(TraitMap)
+	attributeMap := make(AttributeMap)
 
 	switch baseUrl.Scheme {
 	case "ipfs":
 		ipfsUris, err := manager.Connection.IPFS.Client.ObjectGet(baseUrl.Host)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		for i := 0; i < len(ipfsUris.Links); i += 1 {
-			err := FetchAndBuildAttributes(manager.Connection.IPFS, ipfsUris.Links[i].Hash, attributes)
-			if err != nil {
-				return err
+		for i := 0; i < len(ipfsUris.Links); i += 1000 {
+			if err := FetchAndBuildAttributes(manager.Connection.IPFS, ipfsUris.Links[i].Hash, attributeMap); err != nil {
+				return nil, err
 			}
 		}
 	case "https":
 		for i := 0; i < int((asset.totalSupply).Int64()); i += 1000 {
-			err := FetchAndBuildAttributes(manager.Connection.Http, common.BuildUrl(uriZero, i), attributes)
-			if err != nil {
-				return err
+			if err := FetchAndBuildAttributes(manager.Connection.Http, common.BuildUrl(uriZero, i), attributeMap); err != nil {
+				return nil, err
 			}
 		}
 	default:
-		return errURIFormatNotFound
+		return nil, errURIFormatNotFound
 	}
 
 	// ret
-	return nil
+	return &attributeMap, nil
 }
 
 func (manager *Manager) RunSequence() (*Asset, error) {
@@ -143,14 +155,7 @@ func (manager *Manager) RunSequence() (*Asset, error) {
 	}
 	fmt.Printf("Sequencing: %.2d:%s\n", asset.priority, asset.address)
 
-	err = manager.SetTotalSupplyForAsset(asset)
-	if err != nil {
-		manager.WaitlistAppend(asset)
-		return nil, err
-	}
-
-	err = manager.UpdateAttributes(asset)
-	if err != nil {
+	if _, err := manager.UpdateAttributes(asset); err != nil {
 		manager.WaitlistAppend(asset)
 		return nil, err
 	}
