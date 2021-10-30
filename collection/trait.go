@@ -7,7 +7,7 @@ type Item struct {
 type Trait struct {
 	Counter map[string]*Item
 
-	index int
+	Index int
 }
 
 func NewTrait() *Trait {
@@ -37,5 +37,5 @@ func BuildTrait(attributes *[]Attribute, trait *Trait) {
 		counter[trait].name[value]++
 	}
 
-	(*trait).index++
+	(*trait).Index++
 }

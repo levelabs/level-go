@@ -2,11 +2,8 @@ package collection
 
 import (
 	"errors"
-	"fmt"
-	"math/big"
-	"net/url"
+	"log"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/levelabs/level-go/common"
 )
 
@@ -16,9 +13,8 @@ const (
 )
 
 var (
-	errBaseURINotFound   = errors.New("baseURI not found")
-	errURIFormatNotFound = errors.New("An unknown URI format has been found")
 	errEmptyWaitlist     = errors.New("Waitlist is empty")
+	errAttributesUpdated = errors.New("Attributes have been updated")
 )
 
 type Manager struct {
@@ -36,7 +32,9 @@ type Token struct {
 	Attributes []Attribute `json:"attributes"`
 }
 
-func NewManager(assets map[string]int64) (*Manager, error) {
+func NewManager(
+	assets map[string]int64,
+) (*Manager, error) {
 	clientConfig := ClientConfig{
 		EthUri:  ethUri,
 		IPFSUri: ipfsUri,
@@ -58,74 +56,45 @@ func NewManager(assets map[string]int64) (*Manager, error) {
 	return &manager, nil
 }
 
-func (manager *Manager) SetBaseURIForAsset(asset *Asset) error {
-	collection, err := NewCollection(asset.address, manager.Connection.Ethereum.Client)
-	if err != nil {
-		return err
+func (manager *Manager) RunSequence() (*Asset, error) {
+	if manager.Waitlist.Len() <= 0 {
+		return nil, errEmptyWaitlist
 	}
 
-	baseURI, err := collection.BaseURI(&bind.CallOpts{})
+	asset, err := manager.WaitlistRemove()
 	if err != nil {
-		return err
+		return nil, err
+	}
+	log.Printf("[SEQUENCE]: %s:%.2d\n", asset.address, asset.priority)
+
+	trait, err := manager.UpdateAttributes(asset)
+	if err != nil {
+		manager.WaitlistAppend(asset)
+		return nil, err
 	}
 
-	asset.SetBaseURI(baseURI)
+	asset.trait = trait
 
-	return nil
-}
-
-func (manager *Manager) SetTotalSupplyForAsset(asset *Asset) error {
-	collection, err := NewCollection(asset.address, manager.Connection.Ethereum.Client)
-	if err != nil {
-		return err
-	}
-
-	totalSupply, err := collection.TotalSupply(&bind.CallOpts{})
-	if err != nil {
-		return err
-	}
-
-	asset.SetTotalSupply(*totalSupply)
-
-	return nil
+	return asset, nil
 }
 
 func (manager *Manager) UpdateAttributes(asset *Asset) (*Trait, error) {
-	collection, err := NewCollection(asset.address, manager.Connection.Ethereum.Client)
+	err := asset.SetBaseUri(&manager.Connection.Ethereum)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := manager.SetTotalSupplyForAsset(asset); err != nil {
-		return nil, err
-	}
-
-	// todo: what if there isn't a token zero
-	tokenZero, err := collection.TokenByIndex(&bind.CallOpts{}, big.NewInt(0))
-	if err != nil {
-		return nil, err
-	}
-
-	uriZero, err := collection.TokenURI(&bind.CallOpts{}, tokenZero)
-	if err != nil {
-		return nil, err
-	}
-
-	baseUrl, err := url.Parse(uriZero)
-	if err != nil {
+		// Handle Errors Here!
 		return nil, err
 	}
 
 	trait := NewTrait()
 
-	switch baseUrl.Scheme {
-	case "ipfs":
-		fmt.Println("IPFS")
-		if err := manager.RunIPFSTraitGetter(trait, baseUrl.Host, asset); err != nil {
+	// todo: add arweave getter
+	switch asset.uri.Scheme {
+	case UriIPFS:
+		if err := manager.RunIPFSTraitGetter(trait, asset); err != nil {
 			return nil, err
 		}
-	case "https":
-		if err := manager.RunHttpTraitGetter(trait, uriZero, asset); err != nil {
+	case UriHttp:
+		if err := manager.RunHttpTraitGetter(trait, asset); err != nil {
 			return nil, err
 		}
 	default:
@@ -136,8 +105,8 @@ func (manager *Manager) UpdateAttributes(asset *Asset) (*Trait, error) {
 	return trait, nil
 }
 
-func (manager *Manager) RunIPFSTraitGetter(trait *Trait, baseUrl string, _ *Asset) error {
-	ipfsUris, err := manager.Connection.IPFS.Client.ObjectGet(baseUrl)
+func (manager *Manager) RunIPFSTraitGetter(trait *Trait, asset *Asset) error {
+	ipfsUris, err := manager.Connection.IPFS.Client.ObjectGet(asset.uri.Host)
 	if err != nil {
 		return err
 	}
@@ -154,35 +123,17 @@ func (manager *Manager) RunIPFSTraitGetter(trait *Trait, baseUrl string, _ *Asse
 	return nil
 }
 
-func (manager *Manager) RunHttpTraitGetter(trait *Trait, baseUrl string, asset *Asset) error {
-	for i := 0; i < int((asset.totalSupply).Int64()); i += 1000 {
+// todo: fix http getter
+func (manager *Manager) RunHttpTraitGetter(trait *Trait, asset *Asset) error {
+	for i := 0; i < int((asset.totalSupply).Int64()); i += 5000 {
 		var token Token
-		err := GetTokenData(manager.Connection.Http, common.BuildUrl(baseUrl, i), &token)
+		err := GetTokenData(manager.Connection.Http, common.BuildUrl(asset.uri.Host, i), &token)
 		if err != nil {
 			return err
 		}
 		BuildTrait(&token.Attributes, trait)
 	}
 	return nil
-}
-
-func (manager *Manager) RunSequence() (*Asset, error) {
-	if manager.Waitlist.Len() <= 0 {
-		return nil, errEmptyWaitlist
-	}
-
-	asset, err := manager.WaitlistRemove()
-	if err != nil {
-		return nil, err
-	}
-	fmt.Printf("Sequencing: %.2d:%s\n", asset.priority, asset.address)
-
-	if _, err := manager.UpdateAttributes(asset); err != nil {
-		manager.WaitlistAppend(asset)
-		return nil, err
-	}
-
-	return asset, nil
 }
 
 func GetTokenData(fetcher ClientFetcher, tokenUrl string, token *Token) error {

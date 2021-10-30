@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	badger "github.com/dgraph-io/badger/v3"
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-co-op/gocron"
@@ -67,23 +66,26 @@ func (app *App) Schedule() {
 		asset, err := app.manager.RunSequence()
 		if err != nil {
 			// Handle Each Error Here!
-			fmt.Println("[WARN]: Sequencing", err)
+			log.Print("[WARN]: Sequencing", err)
 			return
 		}
 
+		log.Printf("[SUCCESS]: Asset completed sequencing %s", asset)
+
 		serialized, err := asset.MarshalJSON()
 		if err != nil {
-			// do something
+			// Handle Each Error Here!
+			return
 		}
 
-		address := asset.Address()
+		address := asset.AddressBytes()
 		err = app.db.Update(func(txn *badger.Txn) error {
-			err := txn.Set([]byte(address), serialized)
+			err := txn.Set(address, serialized)
 			return err
 		})
 
 		if err != nil {
-			fmt.Println("Db error", err)
+			log.Print("[ERROR]: Issue with DB", err)
 		}
 	})
 
@@ -94,13 +96,13 @@ func (app *App) Schedule() {
 				// do something
 			}
 
-			var asset []byte
+			var bytes []byte
 			err = item.Value(func(val []byte) error {
-				asset = append([]byte{}, val...)
+				bytes = append([]byte{}, val...)
 				return nil
 			})
 
-			fmt.Println("Asset in byte", string(asset))
+			log.Printf("[FOUND]: Asset in DB %s", bytes.Trait)
 
 			return nil
 		})
@@ -116,7 +118,7 @@ func (app *App) Schedule() {
 func main() {
 	assets := map[string]int64{
 		collectionBAYC: time.Now().UnixNano(),
-		// "0x4be3223f8708ca6b30d1e8b8926cf281ec83e770": time.Now().UnixNano(),
+		// colectionPartyDegen: time.Now().UnixNano(),
 		// "0x8a90cab2b38dba80c64b7734e58ee1db38b8992e": time.Now().UnixNano(),
 	}
 

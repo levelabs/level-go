@@ -7,7 +7,11 @@ import (
 )
 
 func BuildUrl(url string, i int) string {
-	return strings.Join([]string{strings.TrimRightFunc(url, func(r rune) bool {
+	return strings.Join([]string{url, strconv.Itoa(i)}, "")
+}
+
+func TrimRightNumber(url string) string {
+	return strings.TrimRightFunc(url, func(r rune) bool {
 		return unicode.IsNumber(r)
-	}), strconv.Itoa(i)}, "")
+	})
 }
